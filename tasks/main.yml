@@ -1,0 +1,68 @@
+---
+
+- name: Create VM "{{ proxmox_guest_hostname }}/{{ proxmox_vm_state }}"
+  community.general.proxmox_kvm:
+    node: "{{ proxmox_pve_node }}"
+    api_user: "{{ proxmox_pve_user }}" 
+    api_password: "{{ proxmox_pve_password }}"
+    api_host: "{{ proxmox_pve_api_node }}"
+    name: "{{ proxmox_guest_hostname }}"
+    clone: "{{ proxmox_guest_template }}"
+    description: "{{ description }}"
+    format: qcow2
+    full: true
+    proxmox_default_behavior: "no_defaults"
+  register: createvm
+- name: Print version
+  debug:
+    msg: "{{ createvm }}"
+
+- name: PoweredOn VM "{{ proxmox_guest_hostname }}"
+  community.general.proxmox_kvm:
+    api_user: "{{ proxmox_pve_user }}"
+    api_password: "{{ proxmox_pve_password }}"
+    api_host: "{{ proxmox_pve_api_node }}"
+    name: "{{ proxmox_guest_hostname }}"
+    proxmox_default_behavior: "no_defaults"
+    state: started
+
+- name: Pause for 5 minutes to build app cache
+  ansible.builtin.pause:
+    seconds: 30
+
+- name: Get VM current state
+  community.general.proxmox_kvm:
+    api_user: "{{ proxmox_pve_user }}"
+    api_password: "{{ proxmox_pve_password }}"
+    api_host: "{{ proxmox_pve_api_node }}"
+    node: "{{ proxmox_pve_node }}"
+    name: "{{ proxmox_guest_hostname }}"
+    proxmox_default_behavior: "no_defaults"
+    state: current
+  register: vminfo
+
+
+- name: Retrieve information about specific VM by ID
+  community.general.proxmox_vm_info:
+    api_user: "{{ proxmox_pve_user }}"
+    api_password: "{{ proxmox_pve_password }}"
+    api_host: "{{ proxmox_pve_api_node }}"
+    node: "{{ proxmox_pve_node }}"
+    type: qemu
+    vmid: "{{ vminfo.vmid }}"
+    config: current
+  register: vminfo_newvm
+
+
+- name: get the mac address of the vm
+  shell: "/usr/sbin/qm config {{vminfo.vmid}} | awk '/net0/ { print tolower($2) }' | awk -F, '/virtio/ { print $1 }' | awk -F= '{ print $2 }'"
+  become: true
+  delegate_to: "{{ proxmox_pve_api_node }}"
+  changed_when: false
+  register: tmp
+
+- debug: "msg={{tmp}}"
+
+- set_fact: "mac={{tmp.stdout}}"
+  failed_when: not ((mac | length) == 17)
+

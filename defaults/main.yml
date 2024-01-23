@@ -1,0 +1,11 @@
+---
+proxmox_pve_node: "{{ pve_node | default('vc1.company.corp') }}"
+proxmox_pve_user: "{{ pve_user | default('root@pve') }}"
+proxmox_pve_password: "{{ pve_password | default('password') }}"
+proxmox_pve_api_node: "{{ pve_api_node | default('pveapi.company.corp') }}"
+
+proxmox_guest_hostname: "{{ vm_name | default('hostname.company.corp') }}"
+proxmox_guest_template: "{{ pve_os_template | default('local:vztmpl/ubuntu-14.04-x86_64.tar.gz') }}"
+proxmox_guest_network: "{{ guest_network | default('hostname.company.corp') }}"
+proxmox_guest_description: "{{ description | default('vm generated with Ansible') }}"
+proxmox_vm_state: "{{ vm_state | default('present') }}"
